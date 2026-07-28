@@ -311,17 +311,95 @@ select:focus {
 }
 
 @media (max-width: 720px) {
-  .consulta-grid {
-    grid-template-columns: 1fr;
+  main {
+    padding: 12px;
   }
 
   .topo {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: stretch;
+    gap: 12px;
+    padding: 12px 16px;
+  }
+
+  .marca {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .marca h1 {
+    font-size: 18px;
   }
 
   .abas {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
     margin-left: 0;
+  }
+
+  .aba {
+    padding: 10px 4px;
+    font-size: 13px;
+    text-align: center;
+    min-height: 44px; /* Tamanho mínimo recomendado para toque (touch target) */
+  }
+
+  .btn-exportar {
+    width: 100%;
+    padding: 10px;
+    min-height: 44px;
+  }
+
+  /* Grade do rack com rolagem horizontal no coletor */
+  #painel-mapa {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 8px;
+  }
+
+  .grade-rack {
+    min-width: 600px; /* Garante que as colunas fiquem legíveis sem espremer */
+    padding: 8px;
+    gap: 4px;
+  }
+
+  .vaga {
+    min-width: 75px;
+    min-height: 75px;
+    padding: 4px;
+  }
+
+  /* Otimização dos formulários para leitor de código de barras no TC22 */
+  .form-scan,
+  .form-consulta {
+    max-width: 100%;
+    padding: 16px;
+    gap: 12px;
+  }
+
+  label {
+    font-size: 13px;
+  }
+
+  input,
+  select {
+    font-size: 16px; /* Evita auto-zoom do browser em telas pequenas */
+    padding: 12px;
+    min-height: 48px;
+  }
+
+  .btn-primario,
+  .form-consulta button {
+    min-height: 48px;
+    font-size: 15px;
+  }
+
+  .consulta-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
   }
 }
 
