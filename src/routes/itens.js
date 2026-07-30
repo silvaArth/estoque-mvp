@@ -3,16 +3,30 @@ const { pool } = require('../db');
 
 const router = express.Router();
 
+// Helper para calcular o código pequeno (5 últimos dígitos descontando o último -> .slice(-6, -1))
+function calcularCodigoPequeno(codigoBarras) {
+  const str = String(codigoBarras || '').trim();
+  if (!str) return '';
+  if (str.length >= 6) {
+    return str.slice(-6, -1);
+  }
+  if (str.length > 1) {
+    return str.slice(0, -1);
+  }
+  return str;
+}
+
 router.get('/', async (req, res) => {
   const { rows } = await pool.query('SELECT * FROM Item ORDER BY descricao');
   res.json(rows);
 });
 
-// Resolve código de barras escaneado -> dados do produto
+// Resolve código de barras escaneado, SKU ou Código Pequeno -> dados do produto
 router.get('/:codigo_barras', async (req, res) => {
+  const cod = req.params.codigo_barras.trim();
   const { rows } = await pool.query(
-    'SELECT * FROM Item WHERE codigo_barras = $1',
-    [req.params.codigo_barras]
+    'SELECT * FROM Item WHERE UPPER(codigo_barras) = UPPER($1) OR UPPER(sku) = UPPER($1) OR UPPER(codigo_pequeno) = UPPER($1)',
+    [cod]
   );
   if (!rows.length) {
     return res.status(404).json({ erro: 'Produto não encontrado para este código.' });
@@ -33,9 +47,8 @@ router.post('/importar', async (req, res) => {
     await client.query('BEGIN');
 
     if (substituir) {
-      await client.query('TRUNCATE TABLE EstoqueAtual RESTART IDENTITY CASCADE');
-      await client.query('TRUNCATE TABLE Movimentacao RESTART IDENTITY CASCADE');
-      await client.query('TRUNCATE TABLE Item RESTART IDENTITY CASCADE');
+      await client.query('DELETE FROM movimentacao');
+      await client.query('DELETE FROM item');
     }
 
     let importados = 0;
@@ -43,15 +56,16 @@ router.post('/importar', async (req, res) => {
       const cod = String(item.codigo_barras || '').trim();
       const desc = String(item.descricao || cod).trim();
       const sku = String(item.sku || cod).trim();
+      const codPequeno = calcularCodigoPequeno(cod);
 
       if (!cod) continue;
 
       await client.query(
-        `INSERT INTO Item (sku, codigo_barras, descricao)
-         VALUES ($1, $2, $3)
+        `INSERT INTO Item (sku, codigo_barras, descricao, codigo_pequeno)
+         VALUES ($1, $2, $3, $4)
          ON CONFLICT (codigo_barras)
-         DO UPDATE SET descricao = EXCLUDED.descricao, sku = EXCLUDED.sku`,
-        [sku, cod, desc]
+         DO UPDATE SET descricao = EXCLUDED.descricao, sku = EXCLUDED.sku, codigo_pequeno = EXCLUDED.codigo_pequeno`,
+        [sku, cod, desc, codPequeno]
       );
       importados++;
     }
@@ -74,11 +88,14 @@ router.post('/', async (req, res) => {
   if (!codigo_barras || !descricao) {
     return res.status(400).json({ erro: 'Código de barras e Descrição são obrigatórios.' });
   }
-  const finalSku = (sku && sku.trim()) ? sku.trim() : codigo_barras.trim();
+  const cod = codigo_barras.trim();
+  const finalSku = (sku && sku.trim()) ? sku.trim() : cod;
+  const codPequeno = calcularCodigoPequeno(cod);
+
   try {
     const { rows } = await pool.query(
-      `INSERT INTO Item (sku, codigo_barras, descricao) VALUES ($1, $2, $3) RETURNING *`,
-      [finalSku, codigo_barras.trim(), descricao.trim()]
+      `INSERT INTO Item (sku, codigo_barras, descricao, codigo_pequeno) VALUES ($1, $2, $3, $4) RETURNING *`,
+      [finalSku, cod, descricao.trim(), codPequeno]
     );
     res.status(201).json(rows[0]);
   } catch (err) {
@@ -89,13 +106,13 @@ router.post('/', async (req, res) => {
   }
 });
 
-// Deletar um produto específico pelo código de barras ou SKU (e seu estoque/movimentações associadas)
+// Deletar um produto específico pelo código de barras, SKU ou Código Pequeno (e seu estoque/movimentações associadas)
 router.delete('/:codigo_barras', async (req, res) => {
   const { codigo_barras } = req.params;
   const cod = codigo_barras.trim();
   try {
     const itemRes = await pool.query(
-      'SELECT id, codigo_barras, descricao FROM Item WHERE UPPER(codigo_barras) = UPPER($1) OR UPPER(sku) = UPPER($1)',
+      'SELECT id, codigo_barras, descricao FROM Item WHERE UPPER(codigo_barras) = UPPER($1) OR UPPER(sku) = UPPER($1) OR UPPER(codigo_pequeno) = UPPER($1)',
       [cod]
     );
     if (!itemRes.rows.length) {

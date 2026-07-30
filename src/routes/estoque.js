@@ -11,9 +11,9 @@ router.get('/item/:codigo_barras', async (req, res) => {
      FROM EstoqueAtual e
      JOIN Item i ON i.id = e.item_id
      JOIN Localizacao l ON l.id = e.localizacao_id
-     WHERE (i.codigo_barras = $1 OR i.sku = $1) AND e.tipo != 'saida'
+     WHERE (UPPER(i.codigo_barras) = UPPER($1) OR UPPER(i.sku) = UPPER($1) OR UPPER(i.codigo_pequeno) = UPPER($1)) AND e.tipo != 'saida'
      ORDER BY e.timestamp DESC`,
-    [req.params.codigo_barras]
+    [req.params.codigo_barras.trim()]
   );
   res.json(rows);
 });

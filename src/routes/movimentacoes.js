@@ -33,7 +33,7 @@ router.post('/', async (req, res) => {
   const localCod = localizacao_codigo_barras.trim();
 
   const itemResult = await pool.query(
-    'SELECT id FROM Item WHERE UPPER(codigo_barras) = UPPER($1) OR UPPER(sku) = UPPER($1)',
+    'SELECT id FROM Item WHERE UPPER(codigo_barras) = UPPER($1) OR UPPER(sku) = UPPER($1) OR UPPER(codigo_pequeno) = UPPER($1)',
     [itemCod]
   );
   if (!itemResult.rows.length) {
