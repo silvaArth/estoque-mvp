@@ -8,21 +8,58 @@ document.querySelectorAll('.aba').forEach((btn) => {
     btn.classList.add('ativa');
     document.getElementById('painel-' + btn.dataset.aba).classList.add('painel-ativo');
     if (btn.dataset.aba === 'mapa') {
+      const ruaAtual = document.getElementById('select-rua').value;
       const rackAtual = document.getElementById('select-rack').value;
-      if (rackAtual) carregarMapa(rackAtual);
+      if (ruaAtual && rackAtual) carregarMapa(ruaAtual, rackAtual);
     }
   });
 });
 
-// ---------- Gerenciamento e Mapa dos Racks ----------
-async function carregarRacks() {
+// ---------- Gerenciamento e Mapa de Ruas e Racks ----------
+async function carregarRuas() {
+  const selectRua = document.getElementById('select-rua');
   const selectRack = document.getElementById('select-rack');
+
   try {
-    const resp = await fetch(`${API}/localizacoes/racks`);
+    const resp = await fetch(`${API}/localizacoes/ruas`);
+    const ruas = await resp.json();
+
+    if (!resp.ok || !Array.isArray(ruas) || !ruas.length) {
+      selectRua.innerHTML = '<option value="">Sem Ruas</option>';
+      return;
+    }
+
+    selectRua.innerHTML = ruas
+      .map((r) => `<option value="${r}">Rua ${r.replace(/^RUA/i, '')}</option>`)
+      .join('');
+
+    selectRua.addEventListener('change', () => {
+      carregarRacks(selectRua.value);
+    });
+
+    // Configura evento do select de Rack
+    selectRack.addEventListener('change', () => {
+      carregarMapa(selectRua.value, selectRack.value);
+    });
+
+    // Carrega racks da primeira rua
+    await carregarRacks(ruas[0]);
+  } catch (err) {
+    selectRua.innerHTML = '<option value="">Erro ao carregar</option>';
+  }
+}
+
+async function carregarRacks(rua) {
+  const selectRack = document.getElementById('select-rack');
+  if (!rua) return;
+
+  try {
+    const resp = await fetch(`${API}/localizacoes/racks?rua=${encodeURIComponent(rua)}`);
     const racks = await resp.json();
 
     if (!resp.ok || !Array.isArray(racks) || !racks.length) {
       selectRack.innerHTML = '<option value="">Sem Racks</option>';
+      document.getElementById('grade-rack').innerHTML = '';
       return;
     }
 
@@ -30,27 +67,22 @@ async function carregarRacks() {
       .map((r) => `<option value="${r}">Rack ${String(r).padStart(2, '0')}</option>`)
       .join('');
 
-    // Ao mudar o selector de rack, recarrega a grade
-    selectRack.addEventListener('change', () => {
-      carregarMapa(selectRack.value);
-    });
-
-    // Carrega o primeiro rack da lista
-    carregarMapa(racks[0]);
+    // Carrega o mapa para o primeiro rack da rua selecionada
+    carregarMapa(rua, racks[0]);
   } catch (err) {
     selectRack.innerHTML = '<option value="">Erro ao carregar</option>';
   }
 }
 
-async function carregarMapa(rackNum) {
+async function carregarMapa(rua, rackNum) {
   const grade = document.getElementById('grade-rack');
   const painelDetalhe = document.getElementById('detalhe-vaga');
   painelDetalhe.classList.add('oculto');
 
-  if (!rackNum) return;
+  if (!rackNum || !rua) return;
 
   try {
-    const resp = await fetch(`${API}/estoque/mapa/${rackNum}`);
+    const resp = await fetch(`${API}/estoque/mapa/${rackNum}?rua=${encodeURIComponent(rua)}`);
     const vagas = await resp.json();
 
     if (!resp.ok || !Array.isArray(vagas)) {
@@ -64,24 +96,27 @@ async function carregarMapa(rackNum) {
     const colunas = [...new Set(vagas.map((v) => v.coluna))].sort((a, b) => a - b);
     const prateleiras = [...new Set(vagas.map((v) => v.prateleira))].sort();
 
-    grade.style.gridTemplateColumns = `24px repeat(${colunas.length || 1}, 1fr)`;
+    // Inverte a visualização: Prateleiras no topo (X) e Colunas nas linhas (Y) para caber na tela
+    grade.style.gridTemplateColumns = `36px repeat(${prateleiras.length || 1}, 1fr)`;
     grade.innerHTML = '';
     grade.appendChild(document.createElement('div')); // canto superior esquerdo vazio
 
-    colunas.forEach((c) => {
+    // Cabeçalhos superiores: Prateleiras (A, B, C, D, E)
+    prateleiras.forEach((p) => {
       const rot = document.createElement('div');
       rot.className = 'rotulo-coluna';
-      rot.textContent = 'C' + c;
+      rot.textContent = 'Prat. ' + p;
       grade.appendChild(rot);
     });
 
-    prateleiras.forEach((prateleira) => {
+    // Linhas: Colunas (C1, C2, C3 ... C80)
+    colunas.forEach((c) => {
       const rot = document.createElement('div');
       rot.className = 'rotulo-prateleira';
-      rot.textContent = prateleira;
+      rot.textContent = 'C' + c;
       grade.appendChild(rot);
 
-      colunas.forEach((c) => {
+      prateleiras.forEach((prateleira) => {
         const vaga = vagas.find((v) => v.coluna === c && v.prateleira === prateleira);
         const el = document.createElement('div');
         el.className = 'vaga' + (vaga && vaga.ocupada ? ' ocupada' : '');
@@ -210,5 +245,5 @@ document.getElementById('btn-exportar').addEventListener('click', () => {
   window.location.href = `${API}/export/estoque.xls`;
 });
 
-// Carrega os racks e o mapa ao abrir a página (aba padrão)
-carregarRacks();
+// Carrega as ruas, racks e o mapa ao abrir a página (aba padrão)
+carregarRuas();

@@ -36,15 +36,24 @@ router.get('/localizacao/:codigo_barras', async (req, res) => {
 
 // Mapa completo do rack - usado pela visualização em grade no front
 router.get('/mapa/:rack', async (req, res) => {
+  const { rua } = req.query;
+  const conditions = ['l.rack = $1', 'l.ativo = true'];
+  const params = [req.params.rack];
+
+  if (rua) {
+    params.push(rua);
+    conditions.push(`l.rua = $${params.length}`);
+  }
+
   const { rows } = await pool.query(
-    `SELECT l.id, l.codigo_barras, l.coluna, l.prateleira,
+    `SELECT l.id, l.codigo_barras, l.coluna, l.prateleira, l.rua,
             i.codigo_barras AS item_codigo_barras, i.descricao, e.quantidade, e.tipo
      FROM Localizacao l
      LEFT JOIN EstoqueAtual e ON e.localizacao_id = l.id
      LEFT JOIN Item i ON i.id = e.item_id
-     WHERE l.rack = $1 AND l.ativo = true
+     WHERE ${conditions.join(' AND ')}
      ORDER BY l.coluna, l.prateleira`,
-    [req.params.rack]
+    params
   );
   res.json(
     rows.map((r) => ({

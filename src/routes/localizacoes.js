@@ -3,11 +3,27 @@ const { pool } = require('../db');
 
 const router = express.Router();
 
-// Retorna a lista de Racks cadastrados e ativos no banco
-router.get('/racks', async (req, res) => {
+// Retorna a lista de Ruas cadastradas e ativas no banco
+router.get('/ruas', async (req, res) => {
   try {
     const { rows } = await pool.query(
-      `SELECT DISTINCT rack FROM Localizacao WHERE ativo = true ORDER BY rack`
+      `SELECT DISTINCT rua FROM Localizacao WHERE ativo = true ORDER BY rua`
+    );
+    res.json(rows.map((r) => r.rua));
+  } catch (err) {
+    res.status(500).json({ erro: 'Erro ao buscar ruas.', detalhe: err.message });
+  }
+});
+
+// Retorna a lista de Racks cadastrados e ativos para uma determinada Rua no banco
+router.get('/racks', async (req, res) => {
+  const { rua } = req.query;
+  try {
+    const where = rua ? 'WHERE rua = $1 AND ativo = true' : 'WHERE ativo = true';
+    const params = rua ? [rua] : [];
+    const { rows } = await pool.query(
+      `SELECT DISTINCT rack FROM Localizacao ${where} ORDER BY rack`,
+      params
     );
     res.json(rows.map((r) => r.rack));
   } catch (err) {
