@@ -56,14 +56,19 @@
         Código da posição
         <input id="input-localizacao" type="text" autocomplete="off" placeholder="Escaneie ou digite" required>
       </label>
-      <label>
-        Tipo
-        <select id="input-tipo" required>
-          <option value="entrada">Entrada</option>
-          <option value="saida">Saída</option>
-          <option value="transferencia">Transferência</option>
-        </select>
-      </label>
+      <div class="linha-dupla">
+        <label>
+          Tipo
+          <select id="input-tipo" required>
+            <option value="entrada">Entrada</option>
+            <option value="saida">Saída</option>
+          </select>
+        </label>
+        <label>
+          Quantidade
+          <input id="input-quantidade" type="number" min="1" value="1" required>
+        </label>
+      </div>
       <label>
         Operador (opcional)
         <input id="input-operador" type="text" autocomplete="off">

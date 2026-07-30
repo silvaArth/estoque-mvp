@@ -3,7 +3,7 @@ const { pool } = require('../db');
 
 const router = express.Router();
 
-const TIPOS_VALIDOS = ['entrada', 'saida', 'transferencia'];
+const TIPOS_VALIDOS = ['entrada', 'saida'];
 
 // Registra uma movimentação. O front sempre manda códigos de barras
 // (escaneados ou digitados), nunca IDs internos - a resolução acontece aqui.

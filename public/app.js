@@ -143,7 +143,7 @@ document.getElementById('form-movimentacao').addEventListener('submit', async (e
     item_codigo_barras: inputItem.value.trim(),
     localizacao_codigo_barras: inputLocalizacao.value.trim(),
     tipo: document.getElementById('input-tipo').value,
-    quantidade: 1,
+    quantidade: Number(document.getElementById('input-quantidade').value) || 1,
     operador: document.getElementById('input-operador').value.trim(),
   };
 
@@ -164,6 +164,7 @@ document.getElementById('form-movimentacao').addEventListener('submit', async (e
     feedback.textContent = 'Movimentação registrada com sucesso.';
     feedback.className = 'feedback sucesso';
     e.target.reset();
+    document.getElementById('input-quantidade').value = 1;
     inputItem.focus();
   } catch (err) {
     feedback.textContent = 'Erro ao se comunicar com o servidor. Verifique se o servidor backend está rodando com npm start.';
