@@ -167,7 +167,32 @@ function mostrarDetalheVaga(vaga) {
           <span class="modal-rotulo">Quantidade</span>
           <span class="modal-valor">${vaga.quantidade ?? 1}</span>
         </div>
+        <hr class="modal-sep">
+        <button type="button" id="btn-modal-excluir-item" class="btn-perigo" style="padding: 8px 12px; font-size: 12px;">
+          🗑 Excluir Produto do Cadastro
+        </button>
       </div>`;
+
+    setTimeout(() => {
+      document.getElementById('btn-modal-excluir-item')?.addEventListener('click', async () => {
+        if (!confirm(`Tem certeza que deseja excluir o produto "${vaga.descricao || vaga.item_codigo_barras}" do sistema?`)) return;
+        try {
+          const resp = await fetch(`${API}/itens/${encodeURIComponent(vaga.item_codigo_barras)}`, { method: 'DELETE' });
+          const dados = await resp.json();
+          if (!resp.ok) {
+            alert(dados.erro || 'Erro ao excluir produto.');
+            return;
+          }
+          alert(dados.mensagem || 'Produto excluído com sucesso!');
+          document.getElementById('modal-vaga')?.classList.add('oculto');
+          const ruaAtual = document.getElementById('select-rua')?.value;
+          const rackAtual = document.getElementById('select-rack')?.value;
+          if (ruaAtual && rackAtual) carregarMapa(ruaAtual, rackAtual);
+        } catch (err) {
+          alert('Erro ao conectar com o servidor para excluir.');
+        }
+      });
+    }, 50);
   } else {
     conteudo.innerHTML = `
       <div class="modal-conteudo-vaga">
@@ -302,6 +327,46 @@ document.getElementById('form-cadastro-item').addEventListener('submit', async (
     document.getElementById('input-cad-codigo').focus();
   } catch (err) {
     feedback.textContent = 'Erro de conexão com o servidor ao cadastrar produto.';
+    feedback.className = 'feedback erro';
+  }
+});
+
+// Excluir Produto pelo formulário
+document.getElementById('form-excluir-item').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const feedback = document.getElementById('feedback-exclusao');
+  feedback.textContent = '';
+  feedback.className = 'feedback';
+
+  const codigo = document.getElementById('input-exc-codigo').value.trim();
+
+  if (!confirm(`Tem certeza que deseja excluir o produto "${codigo}" e seus registros?`)) {
+    return;
+  }
+
+  try {
+    const resp = await fetch(`${API}/itens/${encodeURIComponent(codigo)}`, {
+      method: 'DELETE',
+    });
+
+    const dados = await resp.json();
+
+    if (!resp.ok) {
+      feedback.textContent = dados.erro || 'Erro ao excluir produto.';
+      feedback.className = 'feedback erro';
+      return;
+    }
+
+    feedback.textContent = dados.mensagem || 'Produto excluído com sucesso!';
+    feedback.className = 'feedback sucesso';
+    e.target.reset();
+
+    // Recarrega o mapa se estiver visível
+    const ruaAtual = document.getElementById('select-rua')?.value;
+    const rackAtual = document.getElementById('select-rack')?.value;
+    if (ruaAtual && rackAtual) carregarMapa(ruaAtual, rackAtual);
+  } catch (err) {
+    feedback.textContent = 'Erro de conexão ao tentar excluir o produto.';
     feedback.className = 'feedback erro';
   }
 });

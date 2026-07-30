@@ -40,18 +40,23 @@ router.post('/', async (req, res) => {
   }
 });
 
-// Deletar um produto específico pelo código de barras (e suas movimentações associadas)
+// Deletar um produto específico pelo código de barras ou SKU (e seu estoque/movimentações associadas)
 router.delete('/:codigo_barras', async (req, res) => {
   const { codigo_barras } = req.params;
+  const cod = codigo_barras.trim();
   try {
-    const itemRes = await pool.query('SELECT id FROM Item WHERE codigo_barras = $1', [codigo_barras]);
+    const itemRes = await pool.query(
+      'SELECT id, codigo_barras, descricao FROM Item WHERE UPPER(codigo_barras) = UPPER($1) OR UPPER(sku) = UPPER($1)',
+      [cod]
+    );
     if (!itemRes.rows.length) {
       return res.status(404).json({ erro: 'Produto não encontrado.' });
     }
-    const itemId = itemRes.rows[0].id;
-    await pool.query('DELETE FROM Movimentacao WHERE item_id = $1', [itemId]);
-    await pool.query('DELETE FROM Item WHERE id = $1', [itemId]);
-    res.json({ mensagem: `Produto "${codigo_barras}" e seu histórico foram removidos.` });
+    const item = itemRes.rows[0];
+    await pool.query('DELETE FROM EstoqueAtual WHERE item_id = $1', [item.id]);
+    await pool.query('DELETE FROM Movimentacao WHERE item_id = $1', [item.id]);
+    await pool.query('DELETE FROM Item WHERE id = $1', [item.id]);
+    res.json({ mensagem: `Produto "${item.descricao}" (${item.codigo_barras}) e seus registros foram excluídos.` });
   } catch (err) {
     res.status(500).json({ erro: 'Erro ao deletar produto.', detalhe: err.message });
   }
