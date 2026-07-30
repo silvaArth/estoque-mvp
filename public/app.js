@@ -76,9 +76,6 @@ async function carregarRacks(rua) {
 
 async function carregarMapa(rua, rackNum) {
   const grade = document.getElementById('grade-rack');
-  const painelDetalhe = document.getElementById('detalhe-vaga');
-  painelDetalhe.classList.add('oculto');
-
   if (!rackNum || !rua) return;
 
   try {
@@ -143,17 +140,58 @@ async function carregarMapa(rua, rackNum) {
 }
 
 function mostrarDetalheVaga(vaga) {
-  const painel = document.getElementById('detalhe-vaga');
+  const modal = document.getElementById('modal-vaga');
+  const conteudo = document.getElementById('modal-conteudo');
   if (!vaga) return;
-  painel.classList.remove('oculto');
-  painel.innerHTML = vaga.ocupada
-    ? `<div style="display: flex; flex-direction: column; gap: 4px;">
-        <div><strong>Posição:</strong> ${vaga.codigo_barras}</div>
-        <div><strong>Produto:</strong> ${vaga.item_codigo_barras} — ${vaga.descricao}</div>
-        <div><strong>Quantidade:</strong> ${vaga.quantidade}</div>
-       </div>`
-    : `<strong>Posição: ${vaga.codigo_barras}</strong> — vaga livre`;
+
+  if (vaga.ocupada) {
+    conteudo.innerHTML = `
+      <div class="modal-conteudo-vaga">
+        <div>
+          <span class="modal-badge ocupada">&#9679; Vaga Ocupada</span>
+        </div>
+        <hr class="modal-sep">
+        <div class="modal-linha">
+          <span class="modal-rotulo">Posição</span>
+          <span class="modal-valor">${vaga.codigo_barras}</span>
+        </div>
+        <div class="modal-linha">
+          <span class="modal-rotulo">Cód. de Barras</span>
+          <span class="modal-valor">${vaga.item_codigo_barras || '—'}</span>
+        </div>
+        <div class="modal-linha">
+          <span class="modal-rotulo">Descrição</span>
+          <span class="modal-valor">${vaga.descricao || '—'}</span>
+        </div>
+        <div class="modal-linha">
+          <span class="modal-rotulo">Quantidade</span>
+          <span class="modal-valor">${vaga.quantidade ?? 1}</span>
+        </div>
+      </div>`;
+  } else {
+    conteudo.innerHTML = `
+      <div class="modal-conteudo-vaga">
+        <div>
+          <span class="modal-badge livre">&#9675; Vaga Livre</span>
+        </div>
+        <hr class="modal-sep">
+        <div class="modal-linha">
+          <span class="modal-rotulo">Posição</span>
+          <span class="modal-valor">${vaga.codigo_barras}</span>
+        </div>
+      </div>`;
+  }
+
+  modal.classList.remove('oculto');
 }
+
+// Fechar modal ao clicar no X ou no overlay
+document.addEventListener('DOMContentLoaded', () => {
+  const modal = document.getElementById('modal-vaga');
+  document.getElementById('modal-fechar').addEventListener('click', () => modal.classList.add('oculto'));
+  modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.add('oculto'); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') modal.classList.add('oculto'); });
+});
 
 // ---------- Movimentação ----------
 const inputItem = document.getElementById('input-item');
@@ -191,8 +229,26 @@ document.getElementById('form-movimentacao').addEventListener('submit', async (e
     const dados = await resp.json();
 
     if (!resp.ok) {
-      feedback.textContent = dados.mensagem || dados.erro || 'Erro ao registrar movimentação.';
-      feedback.className = 'feedback erro';
+      if (dados.campo === 'item_codigo_barras') {
+        const codEscaneado = inputItem.value.trim();
+        feedback.innerHTML = `Produto não encontrado. <button type="button" id="btn-ir-cadastrar" style="background:none; border:none; color:var(--amarelo-escuro); text-decoration:underline; font-weight:600; cursor:pointer; font-family:inherit;">Clique aqui para cadastrá-lo</button>`;
+        feedback.className = 'feedback erro';
+        document.getElementById('btn-ir-cadastrar')?.addEventListener('click', () => {
+          document.querySelectorAll('.aba').forEach((b) => b.classList.remove('ativa'));
+          document.querySelectorAll('.painel').forEach((p) => p.classList.remove('painel-ativo'));
+          const abaCad = document.querySelector('[data-aba="cadastrar"]');
+          abaCad?.classList.add('ativa');
+          document.getElementById('painel-cadastrar')?.classList.add('painel-ativo');
+          const inputCadCod = document.getElementById('input-cad-codigo');
+          if (inputCadCod) {
+            inputCadCod.value = codEscaneado;
+            document.getElementById('input-cad-descricao')?.focus();
+          }
+        });
+      } else {
+        feedback.textContent = dados.mensagem || dados.erro || 'Erro ao registrar movimentação.';
+        feedback.className = 'feedback erro';
+      }
       return;
     }
 
@@ -201,8 +257,51 @@ document.getElementById('form-movimentacao').addEventListener('submit', async (e
     e.target.reset();
     document.getElementById('input-quantidade').value = 1;
     inputItem.focus();
+
+    // Recarrega o mapa do rack atual para refletir a nova posição no mapa
+    const ruaAtual = document.getElementById('select-rua')?.value;
+    const rackAtual = document.getElementById('select-rack')?.value;
+    if (ruaAtual && rackAtual) {
+      carregarMapa(ruaAtual, rackAtual);
+    }
   } catch (err) {
     feedback.textContent = 'Erro ao se comunicar com o servidor. Verifique se o servidor backend está rodando com npm start.';
+    feedback.className = 'feedback erro';
+  }
+});
+
+// ---------- Cadastro de Produtos ----------
+document.getElementById('form-cadastro-item').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const feedback = document.getElementById('feedback-cadastro');
+  feedback.textContent = '';
+  feedback.className = 'feedback';
+
+  const codigo = document.getElementById('input-cad-codigo').value.trim();
+  const descricao = document.getElementById('input-cad-descricao').value.trim();
+  const sku = document.getElementById('input-cad-sku').value.trim();
+
+  try {
+    const resp = await fetch(`${API}/itens`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ codigo_barras: codigo, descricao, sku: sku || codigo }),
+    });
+
+    const dados = await resp.json();
+
+    if (!resp.ok) {
+      feedback.textContent = dados.mensagem || dados.erro || 'Erro ao cadastrar produto.';
+      feedback.className = 'feedback erro';
+      return;
+    }
+
+    feedback.textContent = `Produto "${dados.descricao}" (${dados.codigo_barras}) cadastrado com sucesso!`;
+    feedback.className = 'feedback sucesso';
+    e.target.reset();
+    document.getElementById('input-cad-codigo').focus();
+  } catch (err) {
+    feedback.textContent = 'Erro de conexão com o servidor ao cadastrar produto.';
     feedback.className = 'feedback erro';
   }
 });

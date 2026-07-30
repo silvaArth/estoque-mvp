@@ -21,21 +21,22 @@ router.get('/:codigo_barras', async (req, res) => {
 });
 
 router.post('/', async (req, res) => {
-  const { sku, codigo_barras, descricao } = req.body;
-  if (!sku || !codigo_barras || !descricao) {
-    return res.status(400).json({ erro: 'sku, codigo_barras e descricao são obrigatórios.' });
+  const { codigo_barras, descricao, sku } = req.body;
+  if (!codigo_barras || !descricao) {
+    return res.status(400).json({ erro: 'Código de barras e Descrição são obrigatórios.' });
   }
+  const finalSku = (sku && sku.trim()) ? sku.trim() : codigo_barras.trim();
   try {
     const { rows } = await pool.query(
       `INSERT INTO Item (sku, codigo_barras, descricao) VALUES ($1, $2, $3) RETURNING *`,
-      [sku, codigo_barras, descricao]
+      [finalSku, codigo_barras.trim(), descricao.trim()]
     );
     res.status(201).json(rows[0]);
   } catch (err) {
     if (err.code === '23505') {
-      return res.status(409).json({ erro: 'Já existe um produto com esse SKU ou código de barras.' });
+      return res.status(409).json({ erro: 'Já existe um produto com este código de barras ou SKU.' });
     }
-    throw err;
+    res.status(500).json({ erro: 'Erro ao cadastrar produto.', detalhe: err.message });
   }
 });
 

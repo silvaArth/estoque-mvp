@@ -22,6 +22,7 @@
     <nav class="abas" role="tablist">
       <button class="aba ativa" data-aba="mapa">Mapa do Rack</button>
       <button class="aba" data-aba="movimentar">Movimentar</button>
+      <button class="aba" data-aba="cadastrar">Cadastrar Produto</button>
       <button class="aba" data-aba="consultar">Consultar</button>
     </nav>
     <button id="btn-exportar" class="btn-exportar" title="Exportar estoque atual em .xls">
@@ -50,8 +51,15 @@
         </p>
       </div>
       <div id="grade-rack" class="grade-rack" aria-label="Mapa visual do rack"></div>
-      <div id="detalhe-vaga" class="detalhe-vaga oculto"></div>
     </section>
+
+    <!-- MODAL DE DETALHES DA VAGA -->
+    <div id="modal-vaga" class="modal-overlay oculto" role="dialog" aria-modal="true">
+      <div class="modal-card">
+        <button id="modal-fechar" class="modal-fechar" aria-label="Fechar">&times;</button>
+        <div id="modal-conteudo"></div>
+      </div>
+    </div>
 
     <!-- MOVIMENTAR -->
     <section id="painel-movimentar" class="painel">
@@ -83,6 +91,26 @@
         </label>
         <button type="submit" class="btn-primario">Registrar movimentação</button>
         <p id="feedback-movimentacao" class="feedback"></p>
+      </form>
+    </section>
+
+    <!-- CADASTRAR PRODUTO -->
+    <section id="painel-cadastrar" class="painel">
+      <form id="form-cadastro-item" class="form-scan">
+        <label>
+          Código de Barras *
+          <input id="input-cad-codigo" type="text" autocomplete="off" placeholder="Escaneie ou digite o código de barras" required>
+        </label>
+        <label>
+          Descrição do Produto *
+          <input id="input-cad-descricao" type="text" autocomplete="off" placeholder="Ex: Malbec Desodorante Colônia 100ml" required>
+        </label>
+        <label>
+          SKU / Código Interno (opcional)
+          <input id="input-cad-sku" type="text" autocomplete="off" placeholder="Deixe em branco para usar o mesmo código de barras">
+        </label>
+        <button type="submit" class="btn-primario">Salvar Produto</button>
+        <p id="feedback-cadastro" class="feedback"></p>
       </form>
     </section>
 

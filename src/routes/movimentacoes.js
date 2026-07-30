@@ -29,24 +29,30 @@ router.post('/', async (req, res) => {
     return res.status(400).json({ erro: 'quantidade deve ser maior que zero.' });
   }
 
+  const itemCod = item_codigo_barras.trim();
+  const localCod = localizacao_codigo_barras.trim();
+
   const itemResult = await pool.query(
-    'SELECT id FROM Item WHERE codigo_barras = $1 OR sku = $1',
-    [item_codigo_barras]
+    'SELECT id FROM Item WHERE UPPER(codigo_barras) = UPPER($1) OR UPPER(sku) = UPPER($1)',
+    [itemCod]
   );
   if (!itemResult.rows.length) {
     return res.status(404).json({
       erro: 'codigo_nao_encontrado',
       campo: 'item_codigo_barras',
-      mensagem: `Produto com código "${item_codigo_barras}" não encontrado.`,
+      mensagem: `Produto com código "${itemCod}" não encontrado.`,
     });
   }
 
-  const localResult = await pool.query('SELECT id FROM Localizacao WHERE codigo_barras = $1', [localizacao_codigo_barras]);
+  const localResult = await pool.query(
+    'SELECT id FROM Localizacao WHERE UPPER(codigo_barras) = UPPER($1)',
+    [localCod]
+  );
   if (!localResult.rows.length) {
     return res.status(404).json({
       erro: 'codigo_nao_encontrado',
       campo: 'localizacao_codigo_barras',
-      mensagem: `Localização com código "${localizacao_codigo_barras}" não encontrada.`,
+      mensagem: `Localização com código "${localCod}" não encontrada.`,
     });
   }
 
