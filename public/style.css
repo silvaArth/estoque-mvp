@@ -372,7 +372,8 @@ select:focus {
     padding: 10px 4px;
     font-size: 13px;
     text-align: center;
-    min-height: 44px; /* Tamanho mínimo recomendado para toque (touch target) */
+    min-height: 44px;
+    /* Tamanho mínimo recomendado para toque (touch target) */
   }
 
   .btn-exportar {
@@ -430,7 +431,8 @@ select:focus {
 
   input,
   select {
-    font-size: 16px; /* Evita auto-zoom do browser em telas pequenas */
+    font-size: 16px;
+    /* Evita auto-zoom do browser em telas pequenas */
     padding: 12px;
     min-height: 48px;
   }
@@ -441,6 +443,15 @@ select:focus {
     font-size: 15px;
   }
 
+  .linha-dupla {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .linha-dupla label {
+    flex: none;
+    width: 100%;
+  }
   .consulta-grid {
     grid-template-columns: 1fr;
     gap: 16px;

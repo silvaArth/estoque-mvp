@@ -1,107 +1,112 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Endereçamento de Estoque — Rack 1</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Endereçamento de Estoque — Rack 1</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
 
-<header class="topo">
-  <div class="marca">
-    <span class="marca-tag">ENDEREÇAMENTO</span>
-    <h1>Rack 01</h1>
-  </div>
-  <nav class="abas" role="tablist">
-    <button class="aba ativa" data-aba="mapa">Mapa do Rack</button>
-    <button class="aba" data-aba="movimentar">Movimentar</button>
-    <button class="aba" data-aba="consultar">Consultar</button>
-  </nav>
-  <button id="btn-exportar" class="btn-exportar" title="Exportar estoque atual em .xls">
-    Exportar .xls
-  </button>
-</header>
-
-<main>
-
-  <!-- MAPA DO RACK -->
-  <section id="painel-mapa" class="painel painel-ativo">
-    <div class="controles-mapa">
-      <div class="seletor-rack-box">
-        <label for="select-rack">Rack:</label>
-        <select id="select-rack" class="seletor-rack">
-          <option value="">Carregando...</option>
-        </select>
-      </div>
-      <p class="legenda">
-        <span class="chip chip-vazia"></span> vaga livre
-        <span class="chip chip-ocupada"></span> vaga ocupada
-      </p>
+  <header class="topo">
+    <div class="marca">
+      <span class="marca-tag">ENDEREÇAMENTO</span>
+      <h1>Rack 01</h1>
     </div>
-    <div id="grade-rack" class="grade-rack" aria-label="Mapa visual do rack"></div>
-    <div id="detalhe-vaga" class="detalhe-vaga oculto"></div>
-  </section>
+    <nav class="abas" role="tablist">
+      <button class="aba ativa" data-aba="mapa">Mapa do Rack</button>
+      <button class="aba" data-aba="movimentar">Movimentar</button>
+      <button class="aba" data-aba="consultar">Consultar</button>
+    </nav>
+    <button id="btn-exportar" class="btn-exportar" title="Exportar estoque atual em .xls">
+      Exportar .xls
+    </button>
+  </header>
 
-  <!-- MOVIMENTAR -->
-  <section id="painel-movimentar" class="painel">
-    <form id="form-movimentacao" class="form-scan">
-      <label>
-        Código do produto
-        <input id="input-item" type="text" autocomplete="off" placeholder="Escaneie ou digite" required>
-      </label>
-      <label>
-        Código da posição
-        <input id="input-localizacao" type="text" autocomplete="off" placeholder="Escaneie ou digite" required>
-      </label>
-      <div class="linha-dupla">
-        <label>
-          Tipo
-          <select id="input-tipo" required>
-            <option value="entrada">Entrada</option>
-            <option value="saida">Saída</option>
+  <main>
+
+    <!-- MAPA DO RACK -->
+    <section id="painel-mapa" class="painel painel-ativo">
+      <div class="controles-mapa">
+        <div class="seletor-rack-box">
+          <label for="select-rack">Rack:</label>
+          <select id="select-rack" class="seletor-rack">
+            <option value="">Carregando...</option>
           </select>
-        </label>
-        <label>
-          Quantidade
-          <input id="input-quantidade" type="number" min="1" value="1" required>
-        </label>
+        </div>
+        <p class="legenda">
+          <span class="chip chip-vazia"></span> vaga livre
+          <span class="chip chip-ocupada"></span> vaga ocupada
+        </p>
       </div>
-      <label>
-        Operador (opcional)
-        <input id="input-operador" type="text" autocomplete="off">
-      </label>
-      <button type="submit" class="btn-primario">Registrar movimentação</button>
-      <p id="feedback-movimentacao" class="feedback"></p>
-    </form>
-  </section>
+      <div id="grade-rack" class="grade-rack" aria-label="Mapa visual do rack"></div>
+      <div id="detalhe-vaga" class="detalhe-vaga oculto"></div>
+    </section>
 
-  <!-- CONSULTAR -->
-  <section id="painel-consultar" class="painel">
-    <div class="consulta-grid">
-      <form id="form-consulta-item" class="form-consulta">
+    <!-- MOVIMENTAR -->
+    <section id="painel-movimentar" class="painel">
+      <form id="form-movimentacao" class="form-scan">
         <label>
-          Onde está o produto?
-          <input id="input-consulta-item" type="text" autocomplete="off" placeholder="Código do produto">
+          Código do produto
+          <input id="input-item" type="text" autocomplete="off" placeholder="Escaneie ou digite" required>
         </label>
-        <button type="submit">Buscar</button>
-        <div id="resultado-consulta-item" class="resultado"></div>
-      </form>
-      <form id="form-consulta-local" class="form-consulta">
         <label>
-          O que tem nessa posição?
-          <input id="input-consulta-local" type="text" autocomplete="off" placeholder="Código da posição">
+          Código da posição
+          <input id="input-localizacao" type="text" autocomplete="off" placeholder="Escaneie ou digite" required>
         </label>
-        <button type="submit">Buscar</button>
-        <div id="resultado-consulta-local" class="resultado"></div>
+        <div class="linha-dupla">
+          <label>
+            Tipo
+            <select id="input-tipo" required>
+              <option value="entrada">Entrada</option>
+              <option value="saida">Saída</option>
+            </select>
+          </label>
+          <label>
+            Quantidade
+            <input id="input-quantidade" type="number" min="1" value="1" required>
+          </label>
+        </div>
+        <label>
+          Operador (opcional)
+          <input id="input-operador" type="text" autocomplete="off">
+        </label>
+        <button type="submit" class="btn-primario">Registrar movimentação</button>
+        <p id="feedback-movimentacao" class="feedback"></p>
       </form>
-    </div>
-  </section>
+    </section>
 
-</main>
+    <!-- CONSULTAR -->
+    <section id="painel-consultar" class="painel">
+      <div class="consulta-grid">
+        <form id="form-consulta-item" class="form-consulta">
+          <label>
+            Onde está o produto?
+            <input id="input-consulta-item" type="text" autocomplete="off" placeholder="Código do produto">
+          </label>
+          <button type="submit">Buscar</button>
+          <div id="resultado-consulta-item" class="resultado"></div>
+        </form>
+        <form id="form-consulta-local" class="form-consulta">
+          <label>
+            O que tem nessa posição?
+            <input id="input-consulta-local" type="text" autocomplete="off" placeholder="Código da posição">
+          </label>
+          <button type="submit">Buscar</button>
+          <div id="resultado-consulta-local" class="resultado"></div>
+        </form>
+      </div>
+    </section>
 
-<script src="app.js"></script>
+  </main>
+
+  <script src="app.js"></script>
 </body>
+
 </html>
