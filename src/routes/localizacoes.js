@@ -3,6 +3,18 @@ const { pool } = require('../db');
 
 const router = express.Router();
 
+// Retorna a lista de Racks cadastrados e ativos no banco
+router.get('/racks', async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT DISTINCT rack FROM Localizacao WHERE ativo = true ORDER BY rack`
+    );
+    res.json(rows.map((r) => r.rack));
+  } catch (err) {
+    res.status(500).json({ erro: 'Erro ao buscar racks.', detalhe: err.message });
+  }
+});
+
 // Lista todas as posições (uso administrativo / mapa do rack)
 router.get('/', async (req, res) => {
   const { rack, ativo } = req.query;

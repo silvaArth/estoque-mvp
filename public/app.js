@@ -7,15 +7,50 @@ document.querySelectorAll('.aba').forEach((btn) => {
     document.querySelectorAll('.painel').forEach((p) => p.classList.remove('painel-ativo'));
     btn.classList.add('ativa');
     document.getElementById('painel-' + btn.dataset.aba).classList.add('painel-ativo');
-    if (btn.dataset.aba === 'mapa') carregarMapa();
+    if (btn.dataset.aba === 'mapa') {
+      const rackAtual = document.getElementById('select-rack').value;
+      if (rackAtual) carregarMapa(rackAtual);
+    }
   });
 });
 
-// ---------- Mapa do rack (grade visual) ----------
-async function carregarMapa() {
-  const grade = document.getElementById('grade-rack');
+// ---------- Gerenciamento e Mapa dos Racks ----------
+async function carregarRacks() {
+  const selectRack = document.getElementById('select-rack');
   try {
-    const resp = await fetch(`${API}/estoque/mapa/1`);
+    const resp = await fetch(`${API}/localizacoes/racks`);
+    const racks = await resp.json();
+
+    if (!resp.ok || !Array.isArray(racks) || !racks.length) {
+      selectRack.innerHTML = '<option value="">Sem Racks</option>';
+      return;
+    }
+
+    selectRack.innerHTML = racks
+      .map((r) => `<option value="${r}">Rack ${String(r).padStart(2, '0')}</option>`)
+      .join('');
+
+    // Ao mudar o selector de rack, recarrega a grade
+    selectRack.addEventListener('change', () => {
+      carregarMapa(selectRack.value);
+    });
+
+    // Carrega o primeiro rack da lista
+    carregarMapa(racks[0]);
+  } catch (err) {
+    selectRack.innerHTML = '<option value="">Erro ao carregar</option>';
+  }
+}
+
+async function carregarMapa(rackNum) {
+  const grade = document.getElementById('grade-rack');
+  const painelDetalhe = document.getElementById('detalhe-vaga');
+  painelDetalhe.classList.add('oculto');
+
+  if (!rackNum) return;
+
+  try {
+    const resp = await fetch(`${API}/estoque/mapa/${rackNum}`);
     const vagas = await resp.json();
 
     if (!resp.ok || !Array.isArray(vagas)) {
@@ -25,36 +60,45 @@ async function carregarMapa() {
       return;
     }
 
-    grade.innerHTML = '';
-    grade.appendChild(document.createElement('div')); // canto vazio
+    // Identifica colunas e prateleiras dinamicamente presentes neste Rack
+    const colunas = [...new Set(vagas.map((v) => v.coluna))].sort((a, b) => a - b);
+    const prateleiras = [...new Set(vagas.map((v) => v.prateleira))].sort();
 
-    for (let c = 1; c <= 7; c++) {
+    grade.style.gridTemplateColumns = `24px repeat(${colunas.length || 1}, 1fr)`;
+    grade.innerHTML = '';
+    grade.appendChild(document.createElement('div')); // canto superior esquerdo vazio
+
+    colunas.forEach((c) => {
       const rot = document.createElement('div');
       rot.className = 'rotulo-coluna';
       rot.textContent = 'C' + c;
       grade.appendChild(rot);
-    }
+    });
 
-    ['A', 'B', 'C', 'D', 'E'].forEach((prateleira) => {
+    prateleiras.forEach((prateleira) => {
       const rot = document.createElement('div');
       rot.className = 'rotulo-prateleira';
       rot.textContent = prateleira;
       grade.appendChild(rot);
 
-      for (let c = 1; c <= 7; c++) {
+      colunas.forEach((c) => {
         const vaga = vagas.find((v) => v.coluna === c && v.prateleira === prateleira);
         const el = document.createElement('div');
         el.className = 'vaga' + (vaga && vaga.ocupada ? ' ocupada' : '');
         if (vaga && vaga.ocupada) {
           el.title = `${vaga.item_codigo_barras || ''} — ${vaga.descricao || ''}`;
           el.innerHTML = `<span class="vaga-desc">${vaga.item_codigo_barras || ''} — ${vaga.descricao || ''}</span>`;
-        } else {
-          el.title = 'Vaga livre';
+        } else if (vaga) {
+          el.title = `Vaga livre (${vaga.codigo_barras})`;
           el.textContent = '';
+        } else {
+          el.style.opacity = '0.3';
         }
-        el.addEventListener('click', () => mostrarDetalheVaga(vaga));
+        if (vaga) {
+          el.addEventListener('click', () => mostrarDetalheVaga(vaga));
+        }
         grade.appendChild(el);
-      }
+      });
     });
   } catch (err) {
     grade.innerHTML = `<div style="grid-column: 1 / -1; padding: 16px; color: var(--saida); background: #fdf2f2; border: 1px solid var(--saida); border-radius: 4px;">
@@ -165,5 +209,5 @@ document.getElementById('btn-exportar').addEventListener('click', () => {
   window.location.href = `${API}/export/estoque.xls`;
 });
 
-// Carrega o mapa ao abrir a página (aba padrão)
-carregarMapa();
+// Carrega os racks e o mapa ao abrir a página (aba padrão)
+carregarRacks();

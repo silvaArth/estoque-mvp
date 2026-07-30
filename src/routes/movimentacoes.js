@@ -29,7 +29,10 @@ router.post('/', async (req, res) => {
     return res.status(400).json({ erro: 'quantidade deve ser maior que zero.' });
   }
 
-  const itemResult = await pool.query('SELECT id FROM Item WHERE codigo_barras = $1', [item_codigo_barras]);
+  const itemResult = await pool.query(
+    'SELECT id FROM Item WHERE codigo_barras = $1 OR sku = $1',
+    [item_codigo_barras]
+  );
   if (!itemResult.rows.length) {
     return res.status(404).json({
       erro: 'codigo_nao_encontrado',

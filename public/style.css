@@ -101,7 +101,35 @@ main {
   display: block;
 }
 
-/* ---- Mapa do rack: grade que espelha o rack físico ---- */
+/* ---- Mapa do rack: controles e grade ---- */
+.controles-mapa {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.seletor-rack-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.seletor-rack {
+  padding: 6px 12px;
+  font-size: 14px;
+  border-radius: 4px;
+  border: 1.5px solid var(--tinta);
+  background: var(--branco);
+  font-weight: 600;
+  cursor: pointer;
+}
+
 .legenda {
   font-family: 'IBM Plex Mono', monospace;
   font-size: 13px;
@@ -109,7 +137,7 @@ main {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 16px;
+  margin: 0;
 }
 
 .chip {

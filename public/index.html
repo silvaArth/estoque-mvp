@@ -29,10 +29,18 @@
 
   <!-- MAPA DO RACK -->
   <section id="painel-mapa" class="painel painel-ativo">
-    <p class="legenda">
-      <span class="chip chip-vazia"></span> vaga livre
-      <span class="chip chip-ocupada"></span> vaga ocupada
-    </p>
+    <div class="controles-mapa">
+      <div class="seletor-rack-box">
+        <label for="select-rack">Rack:</label>
+        <select id="select-rack" class="seletor-rack">
+          <option value="">Carregando...</option>
+        </select>
+      </div>
+      <p class="legenda">
+        <span class="chip chip-vazia"></span> vaga livre
+        <span class="chip chip-ocupada"></span> vaga ocupada
+      </p>
+    </div>
     <div id="grade-rack" class="grade-rack" aria-label="Mapa visual do rack"></div>
     <div id="detalhe-vaga" class="detalhe-vaga oculto"></div>
   </section>
