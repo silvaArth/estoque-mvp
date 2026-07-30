@@ -371,6 +371,163 @@ document.getElementById('form-excluir-item').addEventListener('submit', async (e
   }
 });
 
+// ---------- Importar Planilha (Modal) ----------
+(function () {
+  const btnAbrir = document.getElementById('btn-abrir-modal-importar');
+  const modal = document.getElementById('modal-importar');
+  const btnFechar = document.getElementById('modal-importar-fechar');
+  const dropZone = document.getElementById('drop-zone-planilha');
+  const fileInput = document.getElementById('input-arquivo-planilha');
+  const btnImportar = document.getElementById('btn-importar-planilha');
+  const chkSubstituir = document.getElementById('chk-substituir-produtos');
+  const nomeArquivo = document.getElementById('nome-arquivo-planilha');
+  const feedback = document.getElementById('feedback-importacao');
+
+  if (!btnAbrir || !modal) return;
+
+  // Abrir modal
+  btnAbrir.addEventListener('click', () => {
+    modal.classList.remove('oculto');
+    feedback.textContent = '';
+    feedback.className = 'feedback';
+  });
+
+  // Fechar modal
+  const fecharModal = () => modal.classList.add('oculto');
+  btnFechar?.addEventListener('click', fecharModal);
+  modal.addEventListener('click', (e) => { if (e.target === modal) fecharModal(); });
+
+  // Clique no drop-zone abre seletor de arquivo
+  dropZone?.addEventListener('click', () => fileInput.click());
+
+  // Drag & drop
+  ['dragenter', 'dragover'].forEach((evt) => {
+    dropZone?.addEventListener(evt, (e) => {
+      e.preventDefault();
+      dropZone.classList.add('drag-over');
+    });
+  });
+  ['dragleave', 'drop'].forEach((evt) => {
+    dropZone?.addEventListener(evt, (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('drag-over');
+    });
+  });
+  dropZone?.addEventListener('drop', (e) => {
+    const files = e.dataTransfer?.files;
+    if (files && files.length) {
+      fileInput.files = files;
+      atualizarArquivo();
+    }
+  });
+
+  function atualizarArquivo() {
+    const file = fileInput.files?.[0];
+    if (file) {
+      nomeArquivo.textContent = `📄 ${file.name}`;
+      btnImportar.disabled = false;
+    } else {
+      nomeArquivo.textContent = '';
+      btnImportar.disabled = true;
+    }
+    feedback.textContent = '';
+    feedback.className = 'feedback';
+  }
+
+  fileInput?.addEventListener('change', atualizarArquivo);
+
+  async function processarPlanilha(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        try {
+          const data = new Uint8Array(evt.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const sheet = workbook.Sheets[workbook.SheetNames[0]];
+          const jsonRows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+
+          const normKey = (k) => String(k || '').toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+          const itens = jsonRows.map((row) => {
+            let codigo = '', descricao = '', sku = '';
+            for (const [key, val] of Object.entries(row)) {
+              const k = normKey(key);
+              const v = String(val ?? '').trim();
+              if (!v) continue;
+              if (['codigo', 'cod', 'codigo_barras', 'codigobarras', 'ean', 'barcode', 'item'].includes(k) && !codigo) codigo = v;
+              else if (['descricao', 'descricao_item', 'produto', 'nome', 'desc'].includes(k) && !descricao) descricao = v;
+              else if (['sku', 'cod_sku'].includes(k) && !sku) sku = v;
+            }
+            if (!codigo || !descricao) {
+              const vals = Object.values(row).map((v) => String(v ?? '').trim()).filter(Boolean);
+              if (!codigo && vals[0]) codigo = vals[0];
+              if (!descricao && vals[1]) descricao = vals[1];
+            }
+            return { codigo_barras: codigo, descricao: descricao || codigo, sku: sku || codigo };
+          }).filter((item) => item.codigo_barras);
+
+          resolve(itens);
+        } catch (err) {
+          reject(err);
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    });
+  }
+
+  btnImportar?.addEventListener('click', async () => {
+    const file = fileInput.files?.[0];
+    if (!file) return;
+
+    btnImportar.disabled = true;
+    btnImportar.textContent = 'Processando...';
+    feedback.textContent = 'Lendo planilha...';
+    feedback.className = 'feedback';
+
+    try {
+      const itens = await processarPlanilha(file);
+
+      if (!itens.length) {
+        feedback.textContent = 'Nenhum produto válido encontrado na planilha.';
+        feedback.className = 'feedback erro';
+        btnImportar.disabled = false;
+        btnImportar.textContent = 'Processar e Importar';
+        return;
+      }
+
+      feedback.textContent = `Enviando ${itens.length} produto(s)...`;
+
+      const resp = await fetch(`${API}/itens/importar`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ itens, substituir: chkSubstituir.checked }),
+      });
+
+      const dados = await resp.json();
+
+      if (!resp.ok) {
+        feedback.textContent = dados.erro || 'Erro ao importar.';
+        feedback.className = 'feedback erro';
+      } else {
+        feedback.textContent = dados.mensagem || `${itens.length} produto(s) importados com sucesso!`;
+        feedback.className = 'feedback sucesso';
+        fileInput.value = '';
+        nomeArquivo.textContent = '';
+        chkSubstituir.checked = false;
+        const ruaAtual = document.getElementById('select-rua')?.value;
+        const rackAtual = document.getElementById('select-rack')?.value;
+        if (ruaAtual && rackAtual) carregarMapa(ruaAtual, rackAtual);
+      }
+    } catch (err) {
+      feedback.textContent = 'Erro ao processar o arquivo.';
+      feedback.className = 'feedback erro';
+    } finally {
+      btnImportar.disabled = false;
+      btnImportar.textContent = 'Processar e Importar';
+    }
+  });
+})();
+
 // ---------- Consulta ----------
 document.getElementById('form-consulta-item').addEventListener('submit', async (e) => {
   e.preventDefault();

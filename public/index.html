@@ -10,6 +10,7 @@
     href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
     rel="stylesheet">
   <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 
 <body>
@@ -132,8 +133,40 @@
           <button type="submit" class="btn-perigo">Excluir Produto</button>
           <p id="feedback-exclusao" class="feedback"></p>
         </form>
+
+        <div style="grid-column: 1 / -1; display: flex; justify-content: center; margin-top: 4px;">
+          <button type="button" id="btn-abrir-modal-importar" class="btn-importar-abrir">
+            📥 Importar Planilha (Excel / CSV)
+          </button>
+        </div>
       </div>
     </section>
+
+    <!-- MODAL DE IMPORTAÇÃO DE PLANILHA -->
+    <div id="modal-importar" class="modal-overlay oculto" role="dialog" aria-modal="true">
+      <div class="modal-card" style="max-width: 440px;">
+        <button id="modal-importar-fechar" class="modal-fechar" aria-label="Fechar">&times;</button>
+        <h3 style="margin: 0 0 4px; font-size: 17px; font-weight: 700; color: var(--amarelo-escuro);">📥 Importar Planilha</h3>
+        <p style="font-size: 13px; color: var(--tinta-suave); margin: 0 0 16px;">
+          Selecione uma planilha (<strong>.xlsx</strong>, <strong>.xls</strong> ou <strong>.csv</strong>). O sistema mapeia automaticamente os cabeçalhos de Código e Descrição.
+        </p>
+
+        <div class="drop-zone" id="drop-zone-planilha">
+          <span style="font-size: 28px;">📄</span>
+          <span style="font-weight: 500; font-size: 13px; color: var(--tinta-suave);">Clique para selecionar o arquivo</span>
+          <span id="nome-arquivo-planilha" style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--amarelo-escuro); font-weight: 600; text-align: center; word-break: break-all;"></span>
+          <input id="input-arquivo-planilha" type="file" accept=".xlsx,.xls,.csv" style="display:none;">
+        </div>
+
+        <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; margin: 14px 0 16px; cursor: pointer;">
+          <input id="chk-substituir-produtos" type="checkbox" style="width: 16px; height: 16px; min-height: 0;">
+          <span>Substituir base de produtos (limpar dados anteriores)</span>
+        </label>
+
+        <button id="btn-importar-planilha" class="btn-primario" style="width: 100%;" disabled>Processar e Importar</button>
+        <p id="feedback-importacao" class="feedback" style="margin-top: 10px;"></p>
+      </div>
+    </div>
 
     <!-- CONSULTAR -->
     <section id="painel-consultar" class="painel">
