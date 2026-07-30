@@ -405,8 +405,12 @@ document.getElementById('form-consulta-local').addEventListener('submit', async 
 });
 
 // ---------- Exportação ----------
-document.getElementById('btn-exportar').addEventListener('click', () => {
+document.getElementById('btn-exportar-xls')?.addEventListener('click', () => {
   window.location.href = `${API}/export/estoque.xls`;
+});
+
+document.getElementById('btn-exportar-csv')?.addEventListener('click', () => {
+  window.location.href = `${API}/export/estoque.csv`;
 });
 
 // Carrega as ruas, racks e o mapa ao abrir a página (aba padrão)

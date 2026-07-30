@@ -12,11 +12,11 @@ function resolverCampo(registro, campoInterno) {
   return registro[campoInterno]; // campos "soltos": quantidade, tipo, timestamp
 }
 
-router.get('/estoque.xls', async (req, res) => {
+async function obterLinhasExportacao() {
   const [dadosResult, mapaResult] = await Promise.all([
     pool.query(
       `SELECT l.codigo_barras AS localizacao_codigo_barras,
-              i.sku AS item_sku, i.descricao AS item_descricao,
+              i.sku AS item_sku, i.codigo_barras AS item_codigo_barras, i.descricao AS item_descricao,
               e.quantidade, e.tipo, e.timestamp
        FROM EstoqueAtual e
        JOIN Item i ON i.id = e.item_id
@@ -30,27 +30,55 @@ router.get('/estoque.xls', async (req, res) => {
   ]);
 
   const mapeamento = mapaResult.rows;
-  if (!mapeamento.length) {
-    return res.status(500).json({ erro: 'Nenhum mapeamento de exportação ativo configurado.' });
-  }
+  if (!mapeamento.length) return null;
 
-  const linhas = dadosResult.rows.map((registro) => {
+  return dadosResult.rows.map((registro) => {
     const linha = {};
     for (const { campo_interno, nome_coluna } of mapeamento) {
       linha[nome_coluna] = resolverCampo(registro, campo_interno);
     }
     return linha;
   });
+}
 
-  const planilha = XLSX.utils.json_to_sheet(linhas);
-  const livro = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(livro, planilha, 'Estoque');
+router.get('/estoque.xls', async (req, res) => {
+  try {
+    const linhas = await obterLinhasExportacao();
+    if (!linhas) {
+      return res.status(500).json({ erro: 'Nenhum mapeamento de exportação ativo configurado.' });
+    }
 
-  const buffer = XLSX.write(livro, { type: 'buffer', bookType: 'xls' });
+    const planilha = XLSX.utils.json_to_sheet(linhas);
+    const livro = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(livro, planilha, 'Estoque');
 
-  res.setHeader('Content-Disposition', 'attachment; filename="estoque.xls"');
-  res.setHeader('Content-Type', 'application/vnd.ms-excel');
-  res.send(buffer);
+    const buffer = XLSX.write(livro, { type: 'buffer', bookType: 'xls' });
+
+    res.setHeader('Content-Disposition', 'attachment; filename="estoque.xls"');
+    res.setHeader('Content-Type', 'application/vnd.ms-excel');
+    res.send(buffer);
+  } catch (err) {
+    res.status(500).json({ erro: 'Erro ao gerar XLS.', detalhe: err.message });
+  }
+});
+
+router.get('/estoque.csv', async (req, res) => {
+  try {
+    const linhas = await obterLinhasExportacao();
+    if (!linhas) {
+      return res.status(500).json({ erro: 'Nenhum mapeamento de exportação ativo configurado.' });
+    }
+
+    const planilha = XLSX.utils.json_to_sheet(linhas);
+    // BOM (\uFEFF) + ponto e vírgula (;) para abertura perfeita no Excel em português
+    const csvContent = '\uFEFF' + XLSX.utils.sheet_to_csv(planilha, { FS: ';' });
+
+    res.setHeader('Content-Disposition', 'attachment; filename="estoque.csv"');
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.send(Buffer.from(csvContent, 'utf-8'));
+  } catch (err) {
+    res.status(500).json({ erro: 'Erro ao gerar CSV.', detalhe: err.message });
+  }
 });
 
 // Visualizar / ajustar o layout de exportação sem tocar em código

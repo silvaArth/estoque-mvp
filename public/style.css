@@ -70,16 +70,23 @@ body {
   font-weight: 600;
 }
 
+.export-grupo {
+  display: flex;
+  gap: 6px;
+}
+
 .btn-exportar {
   background: transparent;
   border: 1px solid var(--amarelo);
   color: var(--amarelo);
-  padding: 8px 16px;
+  padding: 8px 12px;
   border-radius: 3px;
   font-weight: 600;
   cursor: pointer;
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 13px;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  transition: background 0.15s, color 0.15s;
 }
 
 .btn-exportar:hover {
