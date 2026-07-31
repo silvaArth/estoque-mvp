@@ -748,7 +748,7 @@ document.getElementById('form-excluir-item').addEventListener('submit', async (e
   // Baixar modelo de planilha com posição (.xlsx)
   document.getElementById('btn-baixar-modelo-posicao')?.addEventListener('click', () => {
     try {
-      const ws = XLSX.utils.aoa_to_sheet([['codigo_barras', 'descricao', 'posicao', 'quantidade'], ['7891234567890', 'Produto Exemplo', 'RUA1-RACK-2-1-A', 1]]);
+      const ws = XLSX.utils.aoa_to_sheet([['codigo_barras', 'descricao', 'posicao', 'quantidade']]);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Produtos');
       XLSX.writeFile(wb, 'modelo_importacao_com_posicao.xlsx');
