@@ -571,20 +571,14 @@ document.getElementById('form-excluir-item').addEventListener('submit', async (e
     });
   }
 
-  // Baixar modelo de planilha (.xlsx)
+  // Baixar modelo de planilha (.xlsx) - apenas cabeçalho
   document.getElementById('btn-baixar-modelo')?.addEventListener('click', () => {
     try {
-      const dadosModelo = [
-        { codigo_barras: '7891033940592', descricao: 'Eudora Velvet cristal VT' },
-        { codigo_barras: '7891033902392', descricao: 'Kit pais VT' },
-        { codigo_barras: '7891033907175', descricao: 'MakeB VT' },
-      ];
-
-      const ws = XLSX.utils.json_to_sheet(dadosModelo);
+      const ws = XLSX.utils.aoa_to_sheet([['codigo_barras', 'descricao']]);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Produtos');
       XLSX.writeFile(wb, 'modelo_importacao_produtos.xlsx');
-      mostrarToast('Modelo de planilha gerado e baixado!', 'sucesso');
+      mostrarToast('Modelo de planilha baixado!', 'sucesso');
     } catch (err) {
       mostrarToast('Erro ao gerar o modelo de planilha.', 'erro');
     }

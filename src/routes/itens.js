@@ -34,11 +34,6 @@ router.post('/importar', async (req, res) => {
   try {
     await client.query('BEGIN');
 
-    if (substituir) {
-      await client.query('DELETE FROM movimentacao');
-      await client.query('DELETE FROM item');
-    }
-
     let importados = 0;
     for (const item of itens) {
       const cod = String(item.codigo_barras || '').trim();
