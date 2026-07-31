@@ -109,10 +109,6 @@
             Descrição do Produto *
             <input id="input-cad-descricao" type="text" autocomplete="off" placeholder="Ex: Malbec Desodorante Colônia 100ml" required>
           </label>
-          <label>
-            SKU / Código Interno (opcional)
-            <input id="input-cad-sku" type="text" autocomplete="off" placeholder="Deixe em branco para usar o mesmo código de barras">
-          </label>
           <button type="submit" class="btn-primario">Salvar Produto</button>
           <p id="feedback-cadastro" class="feedback"></p>
         </form>
@@ -120,7 +116,7 @@
         <form id="form-excluir-item" class="form-scan" style="border-color: rgba(181, 72, 47, 0.3);">
           <h3 style="margin: 0 0 8px; font-size: 16px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--saida);">Excluir Produto</h3>
           <label>
-            Código de Barras ou SKU *
+            Código de Barras *
             <input id="input-exc-codigo" type="text" autocomplete="off" placeholder="Escaneie ou digite para excluir" required>
           </label>
           <p style="font-size: 12px; color: var(--tinta-suave); margin: -4px 0 8px;">
@@ -143,9 +139,15 @@
       <div class="modal-card" style="max-width: 440px;">
         <button id="modal-importar-fechar" class="modal-fechar" aria-label="Fechar">&times;</button>
         <h3 style="margin: 0 0 4px; font-size: 17px; font-weight: 700; color: var(--amarelo-escuro);">📥 Importar Planilha</h3>
-        <p style="font-size: 13px; color: var(--tinta-suave); margin: 0 0 16px;">
-          Selecione uma planilha (<strong>.xlsx</strong>, <strong>.xls</strong> ou <strong>.csv</strong>). O sistema mapeia automaticamente os cabeçalhos de Código e Descrição.
+        <p style="font-size: 13px; color: var(--tinta-suave); margin: 0 0 12px;">
+          Selecione uma planilha (<strong>.xlsx</strong>, <strong>.xls</strong> ou <strong>.csv</strong>). O sistema mapeia automaticamente as colunas de Código de Barras e Descrição.
         </p>
+
+        <div style="margin-bottom: 14px;">
+          <button type="button" id="btn-baixar-modelo" class="btn-secundario" style="width: 100%; padding: 8px; font-size: 12px; display: flex; align-items: center; justify-content: center; gap: 6px;">
+            📥 Baixar Planilha Modelo (.xlsx)
+          </button>
+        </div>
 
         <div class="drop-zone" id="drop-zone-planilha">
           <span style="font-size: 28px;">📄</span>
@@ -153,11 +155,6 @@
           <span id="nome-arquivo-planilha" style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--amarelo-escuro); font-weight: 600; text-align: center; word-break: break-all;"></span>
           <input id="input-arquivo-planilha" type="file" accept=".xlsx,.xls,.csv" style="display:none;">
         </div>
-
-        <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; margin: 14px 0 16px; cursor: pointer;">
-          <input id="chk-substituir-produtos" type="checkbox" style="width: 16px; height: 16px; min-height: 0;">
-          <span>Substituir base de produtos (limpar dados anteriores)</span>
-        </label>
 
         <button id="btn-importar-planilha" class="btn-primario" style="width: 100%;" disabled>Processar e Importar</button>
         <p id="feedback-importacao" class="feedback" style="margin-top: 10px;"></p>
@@ -168,23 +165,41 @@
     <section id="painel-consultar" class="painel">
       <div class="consulta-grid">
         <form id="form-consulta-item" class="form-consulta">
+          <h3 class="consulta-titulo">🔍 Localizar produto</h3>
           <label>
-            Onde está o produto?
-            <input id="input-consulta-item" type="text" autocomplete="off" placeholder="Código do produto">
+            Código do produto
+            <input id="input-consulta-item" type="text" autocomplete="off" placeholder="Código de barras completo ou 5 dígitos">
           </label>
-          <button type="submit">Buscar</button>
+          <button type="submit" class="btn-consulta">Localizar Produto</button>
           <div id="resultado-consulta-item" class="resultado"></div>
         </form>
         <form id="form-consulta-local" class="form-consulta">
+          <h3 class="consulta-titulo">📍 Localizar posição</h3>
           <label>
-            O que tem nessa posição?
-            <input id="input-consulta-local" type="text" autocomplete="off" placeholder="Código da posição">
+            Código da posição
+            <input id="input-consulta-local" type="text" autocomplete="off" placeholder="Ex: R01-C02-A">
           </label>
-          <button type="submit">Buscar</button>
+          <button type="submit" class="btn-consulta">Localizar Posição</button>
           <div id="resultado-consulta-local" class="resultado"></div>
         </form>
       </div>
     </section>
+
+    <!-- MODAL DE CONFIRMAÇÃO ESTILIZADO -->
+    <div id="modal-confirmacao" class="modal-overlay oculto" role="dialog" aria-modal="true">
+      <div class="modal-card modal-confirm-card">
+        <div class="confirm-icone" id="confirm-icone">⚠️</div>
+        <h3 id="confirm-titulo" class="confirm-titulo">Confirmação</h3>
+        <p id="confirm-mensagem" class="confirm-mensagem"></p>
+        <div class="confirm-acoes">
+          <button type="button" id="btn-confirm-cancelar" class="btn-secundario">Cancelar</button>
+          <button type="button" id="btn-confirm-ok" class="btn-perigo">Confirmar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONTAINER DE NOTIFICAÇÕES (TOAST) -->
+    <div id="toast-container" class="toast-container"></div>
 
   </main>
 

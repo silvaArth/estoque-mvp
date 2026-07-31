@@ -5,33 +5,85 @@ const router = express.Router();
 
 // "Onde está o item X?"
 router.get('/item/:codigo_barras', async (req, res) => {
-  const { rows } = await pool.query(
-    `SELECT l.codigo_barras AS localizacao_codigo_barras, l.rack, l.coluna, l.prateleira,
-            e.quantidade, e.tipo, e.timestamp
-     FROM EstoqueAtual e
-     JOIN Item i ON i.id = e.item_id
-     JOIN Localizacao l ON l.id = e.localizacao_id
-     WHERE (UPPER(i.codigo_barras) = UPPER($1) OR UPPER(i.sku) = UPPER($1) OR UPPER(i.codigo_pequeno) = UPPER($1)) AND e.tipo != 'saida'
-     ORDER BY e.timestamp DESC`,
-    [req.params.codigo_barras.trim()]
-  );
-  res.json(rows);
+  const cod = req.params.codigo_barras.trim();
+
+  try {
+    // Verifica se o produto existe no cadastro
+    const itemCheck = await pool.query(
+      `SELECT id, codigo_barras, descricao FROM Item 
+       WHERE UPPER(codigo_barras) = UPPER($1) OR (LENGTH(codigo_barras) >= 6 AND LEFT(RIGHT(codigo_barras, 6), 5) = $1)`,
+      [cod]
+    );
+
+    if (!itemCheck.rows.length) {
+      return res.status(404).json({
+        existe: false,
+        erro: 'produto_nao_cadastrado',
+        mensagem: `O produto "${cod}" não está cadastrado no sistema.`
+      });
+    }
+
+    const item = itemCheck.rows[0];
+
+    // Busca as posições ativas do produto no estoque
+    const { rows } = await pool.query(
+      `SELECT l.codigo_barras AS localizacao_codigo_barras, l.rack, l.coluna, l.prateleira,
+              e.quantidade, e.tipo, e.timestamp
+       FROM EstoqueAtual e
+       JOIN Localizacao l ON l.id = e.localizacao_id
+       WHERE e.item_id = $1 AND e.tipo != 'saida'
+       ORDER BY e.timestamp DESC`,
+      [item.id]
+    );
+
+    res.json({
+      existe: true,
+      produto: item,
+      posicoes: rows
+    });
+  } catch (err) {
+    res.status(500).json({ erro: 'Erro ao buscar produto no estoque.', detalhe: err.message });
+  }
 });
 
 // "O que tem nessa posição?"
 router.get('/localizacao/:codigo_barras', async (req, res) => {
-  const { rows } = await pool.query(
-    `SELECT i.sku, i.descricao, e.quantidade, e.tipo, e.timestamp
-     FROM EstoqueAtual e
-     JOIN Item i ON i.id = e.item_id
-     JOIN Localizacao l ON l.id = e.localizacao_id
-     WHERE l.codigo_barras = $1`,
-    [req.params.codigo_barras]
-  );
-  if (!rows.length || rows[0].tipo === 'saida') {
-    return res.json({ ocupada: false });
+  const cod = req.params.codigo_barras.trim();
+
+  try {
+    // Verifica se a posição existe no cadastro
+    const localCheck = await pool.query(
+      `SELECT id, codigo_barras, rack, coluna, prateleira FROM Localizacao WHERE UPPER(codigo_barras) = UPPER($1)`,
+      [cod]
+    );
+
+    if (!localCheck.rows.length) {
+      return res.status(404).json({
+        existe: false,
+        erro: 'posicao_nao_cadastrada',
+        mensagem: `A posição "${cod}" não está cadastrada no sistema.`
+      });
+    }
+
+    const localizacao = localCheck.rows[0];
+
+    // Busca o item armazenado nessa posição
+    const { rows } = await pool.query(
+      `SELECT i.codigo_barras, i.descricao, e.quantidade, e.tipo, e.timestamp
+       FROM EstoqueAtual e
+       JOIN Item i ON i.id = e.item_id
+       WHERE e.localizacao_id = $1`,
+      [localizacao.id]
+    );
+
+    if (!rows.length || rows[0].tipo === 'saida') {
+      return res.json({ existe: true, ocupada: false, localizacao });
+    }
+
+    res.json({ existe: true, ocupada: true, localizacao, ...rows[0] });
+  } catch (err) {
+    res.status(500).json({ erro: 'Erro ao buscar posição no estoque.', detalhe: err.message });
   }
-  res.json({ ocupada: true, ...rows[0] });
 });
 
 // Mapa completo do rack - usado pela visualização em grade no front

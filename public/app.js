@@ -1,5 +1,79 @@
 const API = '';
 
+// ---------- Popup de Confirmação Customizado ----------
+function pedirConfirmacao({
+  titulo = 'Confirmação',
+  mensagem = 'Tem certeza que deseja realizar esta ação?',
+  textoConfirmar = 'Confirmar',
+  textoCancelar = 'Cancelar',
+  tipo = 'perigo',
+  icone = '⚠️'
+} = {}) {
+  return new Promise((resolve) => {
+    const modal = document.getElementById('modal-confirmacao');
+    const elTitulo = document.getElementById('confirm-titulo');
+    const elMensagem = document.getElementById('confirm-mensagem');
+    const elIcone = document.getElementById('confirm-icone');
+    const btnOk = document.getElementById('btn-confirm-ok');
+    const btnCancelar = document.getElementById('btn-confirm-cancelar');
+
+    if (!modal) {
+      resolve(window.confirm(mensagem));
+      return;
+    }
+
+    elTitulo.textContent = titulo;
+    elMensagem.textContent = mensagem;
+    elIcone.textContent = icone;
+    btnOk.textContent = textoConfirmar;
+    btnCancelar.textContent = textoCancelar;
+
+    if (tipo === 'perigo') {
+      btnOk.className = 'btn-perigo';
+    } else {
+      btnOk.className = 'btn-primario';
+    }
+
+    modal.classList.remove('oculto');
+
+    const fechar = (valor) => {
+      modal.classList.add('oculto');
+      btnOk.removeEventListener('click', handlerOk);
+      btnCancelar.removeEventListener('click', handlerCancel);
+      resolve(valor);
+    };
+
+    const handlerOk = () => fechar(true);
+    const handlerCancel = () => fechar(false);
+
+    btnOk.addEventListener('click', handlerOk);
+    btnCancelar.addEventListener('click', handlerCancel);
+  });
+}
+
+// ---------- Notificações Toast Flutuantes ----------
+function mostrarToast(mensagem, tipo = 'sucesso', duracao = 3500) {
+  let container = document.getElementById('toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toast-container';
+    container.className = 'toast-container';
+    document.body.appendChild(container);
+  }
+
+  const toast = document.createElement('div');
+  const icone = tipo === 'sucesso' ? '✅' : tipo === 'erro' ? '❌' : 'ℹ️';
+  toast.className = `toast toast-${tipo}`;
+  toast.innerHTML = `<span class="toast-icone">${icone}</span> <span class="toast-msg">${mensagem}</span>`;
+
+  container.appendChild(toast);
+
+  setTimeout(() => {
+    toast.classList.add('toast-saindo');
+    setTimeout(() => toast.remove(), 250);
+  }, duracao);
+}
+
 // ---------- Navegação entre abas ----------
 document.querySelectorAll('.aba').forEach((btn) => {
   btn.addEventListener('click', () => {
@@ -168,28 +242,46 @@ function mostrarDetalheVaga(vaga) {
           <span class="modal-valor">${vaga.quantidade ?? 1}</span>
         </div>
         <hr class="modal-sep">
-        <button type="button" id="btn-modal-excluir-item" class="btn-perigo" style="padding: 8px 12px; font-size: 12px;">
-          🗑 Excluir Produto do Cadastro
+        <button type="button" id="btn-modal-remover-posicao" class="btn-perigo" style="padding: 10px 14px; font-size: 13px; font-weight: 600; width: 100%;">
+          📦 Remover Produto desta Posição
         </button>
       </div>`;
 
     setTimeout(() => {
-      document.getElementById('btn-modal-excluir-item')?.addEventListener('click', async () => {
-        if (!confirm(`Tem certeza que deseja excluir o produto "${vaga.descricao || vaga.item_codigo_barras}" do sistema?`)) return;
+      document.getElementById('btn-modal-remover-posicao')?.addEventListener('click', async () => {
+        const confirmado = await pedirConfirmacao({
+          titulo: 'Remover da Posição',
+          mensagem: `Deseja remover o produto "${vaga.descricao || vaga.item_codigo_barras}" da posição ${vaga.codigo_barras}?`,
+          textoConfirmar: 'Sim, Remover',
+          textoCancelar: 'Cancelar',
+          tipo: 'perigo',
+          icone: '📦'
+        });
+        if (!confirmado) return;
         try {
-          const resp = await fetch(`${API}/itens/${encodeURIComponent(vaga.item_codigo_barras)}`, { method: 'DELETE' });
+          const resp = await fetch(`${API}/movimentacoes`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              item_codigo_barras: vaga.item_codigo_barras,
+              localizacao_codigo_barras: vaga.codigo_barras,
+              tipo: 'saida',
+              quantidade: vaga.quantidade || 1,
+              operador: 'Remoção via Mapa',
+            }),
+          });
           const dados = await resp.json();
           if (!resp.ok) {
-            alert(dados.erro || 'Erro ao excluir produto.');
+            mostrarToast(dados.erro || dados.mensagem || 'Erro ao remover produto da posição.', 'erro');
             return;
           }
-          alert(dados.mensagem || 'Produto excluído com sucesso!');
+          mostrarToast(`Produto removido da posição ${vaga.codigo_barras} com sucesso!`, 'sucesso');
           document.getElementById('modal-vaga')?.classList.add('oculto');
           const ruaAtual = document.getElementById('select-rua')?.value;
           const rackAtual = document.getElementById('select-rack')?.value;
           if (ruaAtual && rackAtual) carregarMapa(ruaAtual, rackAtual);
         } catch (err) {
-          alert('Erro ao conectar com o servidor para excluir.');
+          mostrarToast('Erro ao conectar com o servidor para registrar a remoção.', 'erro');
         }
       });
     }, 50);
@@ -304,13 +396,12 @@ document.getElementById('form-cadastro-item').addEventListener('submit', async (
 
   const codigo = document.getElementById('input-cad-codigo').value.trim();
   const descricao = document.getElementById('input-cad-descricao').value.trim();
-  const sku = document.getElementById('input-cad-sku').value.trim();
 
   try {
     const resp = await fetch(`${API}/itens`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ codigo_barras: codigo, descricao, sku: sku || codigo }),
+      body: JSON.stringify({ codigo_barras: codigo, descricao }),
     });
 
     const dados = await resp.json();
@@ -340,9 +431,15 @@ document.getElementById('form-excluir-item').addEventListener('submit', async (e
 
   const codigo = document.getElementById('input-exc-codigo').value.trim();
 
-  if (!confirm(`Tem certeza que deseja excluir o produto "${codigo}" e seus registros?`)) {
-    return;
-  }
+  const confirmado = await pedirConfirmacao({
+    titulo: 'Excluir Produto',
+    mensagem: `Tem certeza que deseja excluir o produto "${codigo}" e seus registros permanentemente do cadastro?`,
+    textoConfirmar: 'Sim, Excluir',
+    textoCancelar: 'Cancelar',
+    tipo: 'perigo',
+    icone: '🗑'
+  });
+  if (!confirmado) return;
 
   try {
     const resp = await fetch(`${API}/itens/${encodeURIComponent(codigo)}`, {
@@ -449,21 +546,20 @@ document.getElementById('form-excluir-item').addEventListener('submit', async (e
           const normKey = (k) => String(k || '').toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
           const itens = jsonRows.map((row) => {
-            let codigo = '', descricao = '', sku = '';
+            let codigo = '', descricao = '';
             for (const [key, val] of Object.entries(row)) {
               const k = normKey(key);
               const v = String(val ?? '').trim();
               if (!v) continue;
               if (['codigo', 'cod', 'codigo_barras', 'codigobarras', 'ean', 'barcode', 'item'].includes(k) && !codigo) codigo = v;
               else if (['descricao', 'descricao_item', 'produto', 'nome', 'desc'].includes(k) && !descricao) descricao = v;
-              else if (['sku', 'cod_sku'].includes(k) && !sku) sku = v;
             }
             if (!codigo || !descricao) {
               const vals = Object.values(row).map((v) => String(v ?? '').trim()).filter(Boolean);
               if (!codigo && vals[0]) codigo = vals[0];
               if (!descricao && vals[1]) descricao = vals[1];
             }
-            return { codigo_barras: codigo, descricao: descricao || codigo, sku: sku || codigo };
+            return { codigo_barras: codigo, descricao: descricao || codigo };
           }).filter((item) => item.codigo_barras);
 
           resolve(itens);
@@ -474,6 +570,25 @@ document.getElementById('form-excluir-item').addEventListener('submit', async (e
       reader.readAsArrayBuffer(file);
     });
   }
+
+  // Baixar modelo de planilha (.xlsx)
+  document.getElementById('btn-baixar-modelo')?.addEventListener('click', () => {
+    try {
+      const dadosModelo = [
+        { codigo_barras: '7891033940592', descricao: 'Eudora Velvet cristal VT' },
+        { codigo_barras: '7891033902392', descricao: 'Kit pais VT' },
+        { codigo_barras: '7891033907175', descricao: 'MakeB VT' },
+      ];
+
+      const ws = XLSX.utils.json_to_sheet(dadosModelo);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Produtos');
+      XLSX.writeFile(wb, 'modelo_importacao_produtos.xlsx');
+      mostrarToast('Modelo de planilha gerado e baixado!', 'sucesso');
+    } catch (err) {
+      mostrarToast('Erro ao gerar o modelo de planilha.', 'erro');
+    }
+  });
 
   btnImportar?.addEventListener('click', async () => {
     const file = fileInput.files?.[0];
@@ -490,6 +605,7 @@ document.getElementById('form-excluir-item').addEventListener('submit', async (e
       if (!itens.length) {
         feedback.textContent = 'Nenhum produto válido encontrado na planilha.';
         feedback.className = 'feedback erro';
+        mostrarToast('Nenhum produto válido encontrado na planilha.', 'erro');
         btnImportar.disabled = false;
         btnImportar.textContent = 'Processar e Importar';
         return;
@@ -500,7 +616,7 @@ document.getElementById('form-excluir-item').addEventListener('submit', async (e
       const resp = await fetch(`${API}/itens/importar`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ itens, substituir: chkSubstituir.checked }),
+        body: JSON.stringify({ itens }),
       });
 
       const dados = await resp.json();
@@ -508,12 +624,14 @@ document.getElementById('form-excluir-item').addEventListener('submit', async (e
       if (!resp.ok) {
         feedback.textContent = dados.erro || 'Erro ao importar.';
         feedback.className = 'feedback erro';
+        mostrarToast(dados.erro || 'Erro ao importar produtos.', 'erro');
       } else {
-        feedback.textContent = dados.mensagem || `${itens.length} produto(s) importados com sucesso!`;
+        const msgSucesso = dados.mensagem || `${itens.length} produto(s) importados com sucesso!`;
+        feedback.textContent = msgSucesso;
         feedback.className = 'feedback sucesso';
+        mostrarToast(msgSucesso, 'sucesso');
         fileInput.value = '';
         nomeArquivo.textContent = '';
-        chkSubstituir.checked = false;
         const ruaAtual = document.getElementById('select-rua')?.value;
         const rackAtual = document.getElementById('select-rack')?.value;
         if (ruaAtual && rackAtual) carregarMapa(ruaAtual, rackAtual);
@@ -521,6 +639,7 @@ document.getElementById('form-excluir-item').addEventListener('submit', async (e
     } catch (err) {
       feedback.textContent = 'Erro ao processar o arquivo.';
       feedback.className = 'feedback erro';
+      mostrarToast('Erro ao processar a planilha.', 'erro');
     } finally {
       btnImportar.disabled = false;
       btnImportar.textContent = 'Processar e Importar';
@@ -533,15 +652,48 @@ document.getElementById('form-consulta-item').addEventListener('submit', async (
   e.preventDefault();
   const codigo = document.getElementById('input-consulta-item').value.trim();
   const resultado = document.getElementById('resultado-consulta-item');
+  if (!codigo) {
+    resultado.innerHTML = '<div class="res-card res-alerta">⚠️ Por favor, informe um código para buscar.</div>';
+    return;
+  }
+  resultado.innerHTML = '<div class="res-card res-carregando">⏳ Buscando informações...</div>';
   try {
     const resp = await fetch(`${API}/estoque/item/${encodeURIComponent(codigo)}`);
     const dados = await resp.json();
 
-    resultado.innerHTML = Array.isArray(dados) && dados.length
-      ? dados.map((d) => `<div class="linha-res">${d.localizacao_codigo_barras} — qtd. ${d.quantidade}</div>`).join('')
-      : '<div class="linha-res">Nenhuma posição encontrada para esse produto.</div>';
+    if (!resp.ok && dados.erro === 'produto_nao_cadastrado') {
+      resultado.innerHTML = `<div class="res-card res-erro">⚠️ ${dados.mensagem || 'Produto não encontrado no cadastro.'}</div>`;
+      return;
+    }
+
+    if (dados.existe) {
+      if (dados.posicoes && dados.posicoes.length) {
+        resultado.innerHTML = `
+          <div style="margin-bottom: 6px; font-weight: 600; font-size: 13px; color: var(--tinta);">${dados.produto.descricao}</div>
+        ` + dados.posicoes.map((d) => `
+          <div class="res-card res-sucesso">
+            <div class="res-header">
+              <span class="res-badge pos">📍 ${d.localizacao_codigo_barras}</span>
+              <span class="res-badge qtd">Qtd: ${d.quantidade}</span>
+            </div>
+            <div class="res-detalhe">
+              <span class="res-sub">Rack: ${d.rack} | Coluna: ${d.coluna} | Prat: ${d.prateleira}</span>
+            </div>
+          </div>
+        `).join('');
+      } else {
+        resultado.innerHTML = `
+          <div class="res-card res-vazio">
+            <div style="font-weight: 600; font-size: 13px; color: var(--tinta);">${dados.produto.descricao}</div>
+            <div class="res-sub" style="margin-top: 4px;">📦 Produto cadastrado, mas sem estoque/posição no momento.</div>
+          </div>
+        `;
+      }
+    } else {
+      resultado.innerHTML = `<div class="res-card res-erro">⚠️ Produto "${codigo}" não encontrado no sistema.</div>`;
+    }
   } catch (err) {
-    resultado.innerHTML = '<div class="linha-res" style="color: var(--saida);">Erro ao conectar com o servidor.</div>';
+    resultado.innerHTML = '<div class="res-card res-erro">❌ Erro ao conectar com o servidor.</div>';
   }
 });
 
@@ -549,15 +701,47 @@ document.getElementById('form-consulta-local').addEventListener('submit', async 
   e.preventDefault();
   const codigo = document.getElementById('input-consulta-local').value.trim();
   const resultado = document.getElementById('resultado-consulta-local');
+  if (!codigo) {
+    resultado.innerHTML = '<div class="res-card res-alerta">⚠️ Por favor, informe a posição para buscar.</div>';
+    return;
+  }
+  resultado.innerHTML = '<div class="res-card res-carregando">⏳ Buscando informações...</div>';
   try {
     const resp = await fetch(`${API}/estoque/localizacao/${encodeURIComponent(codigo)}`);
     const dados = await resp.json();
 
-    resultado.innerHTML = dados.ocupada
-      ? `<div class="linha-res">${dados.sku} — ${dados.descricao} (qtd. ${dados.quantidade})</div>`
-      : '<div class="linha-res">Vaga livre.</div>';
+    if (!resp.ok && dados.erro === 'posicao_nao_cadastrada') {
+      resultado.innerHTML = `<div class="res-card res-erro">⚠️ ${dados.mensagem || 'Posição não cadastrada no sistema.'}</div>`;
+      return;
+    }
+
+    if (dados.ocupada) {
+      resultado.innerHTML = `
+        <div class="res-card res-sucesso">
+          <div class="res-header">
+            <span class="res-badge ocupada">🔴 VAGA OCUPADA</span>
+            <span class="res-badge qtd">Qtd: ${dados.quantidade}</span>
+          </div>
+          <div class="res-body">
+            <div class="res-titulo-item">${dados.descricao || 'Sem descrição'}</div>
+            <div class="res-sub">Cód: ${dados.codigo_barras || '—'}</div>
+          </div>
+        </div>
+      `;
+    } else if (dados.existe) {
+      resultado.innerHTML = `
+        <div class="res-card res-livre">
+          <div class="res-header">
+            <span class="res-badge livre">🟢 VAGA LIVRE</span>
+          </div>
+          <div class="res-sub" style="margin-top: 4px;">Esta posição (${dados.localizacao.codigo_barras}) existe e está disponível para armazenamento.</div>
+        </div>
+      `;
+    } else {
+      resultado.innerHTML = `<div class="res-card res-erro">⚠️ Posição "${codigo}" não encontrada no sistema.</div>`;
+    }
   } catch (err) {
-    resultado.innerHTML = '<div class="linha-res" style="color: var(--saida);">Erro ao conectar com o servidor.</div>';
+    resultado.innerHTML = '<div class="res-card res-erro">❌ Erro ao conectar com o servidor.</div>';
   }
 });
 

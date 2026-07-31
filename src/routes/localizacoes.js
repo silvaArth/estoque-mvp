@@ -3,6 +3,8 @@ const { pool } = require('../db');
 
 const router = express.Router();
 
+
+
 // Retorna a lista de Ruas cadastradas e ativas no banco
 router.get('/ruas', async (req, res) => {
   try {

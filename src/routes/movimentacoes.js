@@ -33,7 +33,7 @@ router.post('/', async (req, res) => {
   const localCod = localizacao_codigo_barras.trim();
 
   const itemResult = await pool.query(
-    'SELECT id FROM Item WHERE UPPER(codigo_barras) = UPPER($1) OR UPPER(sku) = UPPER($1) OR UPPER(codigo_pequeno) = UPPER($1)',
+    'SELECT id FROM Item WHERE UPPER(codigo_barras) = UPPER($1) OR (LENGTH(codigo_barras) >= 6 AND LEFT(RIGHT(codigo_barras, 6), 5) = $1)',
     [itemCod]
   );
   if (!itemResult.rows.length) {
@@ -83,7 +83,7 @@ router.get('/', async (req, res) => {
 
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
   const { rows } = await pool.query(
-    `SELECT m.*, i.sku, i.descricao, l.codigo_barras AS localizacao_codigo_barras
+    `SELECT m.*, i.codigo_barras AS item_codigo_barras, i.descricao, l.codigo_barras AS localizacao_codigo_barras
      ${joins} ${where} ORDER BY m.timestamp DESC LIMIT 200`,
     params
   );

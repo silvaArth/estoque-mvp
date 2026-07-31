@@ -15,7 +15,6 @@ CREATE TABLE IF NOT EXISTS Localizacao (
 
 CREATE TABLE IF NOT EXISTS Item (
   id              SERIAL PRIMARY KEY,
-  sku             VARCHAR(50) UNIQUE NOT NULL,
   codigo_barras   VARCHAR(50) UNIQUE NOT NULL,
   descricao       VARCHAR(255) NOT NULL,
   ativo           BOOLEAN NOT NULL DEFAULT true,

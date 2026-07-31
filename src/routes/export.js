@@ -16,7 +16,7 @@ async function obterLinhasExportacao() {
   const [dadosResult, mapaResult] = await Promise.all([
     pool.query(
       `SELECT l.codigo_barras AS localizacao_codigo_barras,
-              i.sku AS item_sku, i.codigo_barras AS item_codigo_barras, i.descricao AS item_descricao,
+              i.codigo_barras AS item_codigo_barras, i.descricao AS item_descricao,
               e.quantidade, e.tipo, e.timestamp
        FROM EstoqueAtual e
        JOIN Item i ON i.id = e.item_id
