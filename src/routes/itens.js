@@ -63,6 +63,78 @@ router.post('/importar', async (req, res) => {
   }
 });
 
+// Importação em massa com Posicao (Endereçamento opcional)
+router.post('/importar-com-posicao', async (req, res) => {
+  const { itens } = req.body;
+
+  if (!Array.isArray(itens) || !itens.length) {
+    return res.status(400).json({ erro: 'Nenhum item válido encontrado na planilha para importar.' });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    let importados = 0;
+    let endereçados = 0;
+    const errosPosicao = [];
+
+    for (const item of itens) {
+      const cod = String(item.codigo_barras || '').trim();
+      const desc = String(item.descricao || cod).trim();
+      const pos = String(item.posicao || '').trim();
+      const qtd = Number(item.quantidade) > 0 ? Number(item.quantidade) : 1;
+
+      if (!cod) continue;
+
+      // 1. Inserir ou atualizar produto na tabela Item
+      const itemRes = await client.query(
+        `INSERT INTO Item (codigo_barras, descricao)
+         VALUES ($1, $2)
+         ON CONFLICT (codigo_barras)
+         DO UPDATE SET descricao = EXCLUDED.descricao
+         RETURNING id`,
+        [cod, desc]
+      );
+      const itemId = itemRes.rows[0].id;
+      importados++;
+
+      // 2. Se a posição foi informada, buscar e criar movimentação de entrada
+      if (pos) {
+        const localRes = await client.query(
+          'SELECT id FROM Localizacao WHERE UPPER(codigo_barras) = UPPER($1)',
+          [pos]
+        );
+
+        if (localRes.rows.length) {
+          const localId = localRes.rows[0].id;
+          await client.query(
+            `INSERT INTO Movimentacao (item_id, localizacao_id, tipo, quantidade, operador)
+             VALUES ($1, $2, 'entrada', $3, 'Importação')`,
+            [itemId, localId, qtd]
+          );
+          endereçados++;
+        } else {
+          errosPosicao.push(`Posição "${pos}" não encontrada para o produto "${cod}".`);
+        }
+      }
+    }
+
+    await client.query('COMMIT');
+    res.json({
+      mensagem: `${importados} produto(s) importados (${endereçados} endereçados com sucesso)!`,
+      importados,
+      endereçados,
+      errosPosicao
+    });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    res.status(500).json({ erro: 'Erro ao importar itens com posição da planilha.', detalhe: err.message });
+  } finally {
+    client.release();
+  }
+});
+
 router.post('/', async (req, res) => {
   const { codigo_barras, descricao } = req.body;
   if (!codigo_barras || !descricao) {

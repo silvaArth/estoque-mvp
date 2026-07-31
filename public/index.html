@@ -126,15 +126,18 @@
           <p id="feedback-exclusao" class="feedback"></p>
         </form>
 
-        <div style="grid-column: 1 / -1; display: flex; justify-content: center; margin-top: 4px;">
+        <div style="grid-column: 1 / -1; display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin-top: 4px;">
           <button type="button" id="btn-abrir-modal-importar" class="btn-importar-abrir">
             📥 Importar Planilha (Excel / CSV)
+          </button>
+          <button type="button" id="btn-abrir-modal-importar-posicao" class="btn-importar-abrir" style="background: rgba(43, 108, 176, 0.1); border-color: rgba(43, 108, 176, 0.3); color: #2b6cb0;">
+            📍 Importar com Posição (Excel / CSV)
           </button>
         </div>
       </div>
     </section>
 
-    <!-- MODAL DE IMPORTAÇÃO DE PLANILHA -->
+    <!-- MODAL DE IMPORTAÇÃO DE PLANILHA (PADRÃO) -->
     <div id="modal-importar" class="modal-overlay oculto" role="dialog" aria-modal="true">
       <div class="modal-card" style="max-width: 440px;">
         <button id="modal-importar-fechar" class="modal-fechar" aria-label="Fechar">&times;</button>
@@ -158,6 +161,33 @@
 
         <button id="btn-importar-planilha" class="btn-primario" style="width: 100%;" disabled>Processar e Importar</button>
         <p id="feedback-importacao" class="feedback" style="margin-top: 10px;"></p>
+      </div>
+    </div>
+
+    <!-- MODAL DE IMPORTAÇÃO DE PLANILHA COM POSIÇÃO -->
+    <div id="modal-importar-posicao" class="modal-overlay oculto" role="dialog" aria-modal="true">
+      <div class="modal-card" style="max-width: 460px;">
+        <button id="modal-importar-posicao-fechar" class="modal-fechar" aria-label="Fechar">&times;</button>
+        <h3 style="margin: 0 0 4px; font-size: 17px; font-weight: 700; color: #2b6cb0;">📍 Importar com Posição</h3>
+        <p style="font-size: 13px; color: var(--tinta-suave); margin: 0 0 12px;">
+          Selecione uma planilha (<strong>.xlsx</strong>, <strong>.xls</strong> ou <strong>.csv</strong>) contendo a coluna <strong>Posição</strong> no formato <code>RUA1-RACK-2-1-A</code>. Produtos com a posição em branco serão apenas cadastrados.
+        </p>
+
+        <div style="margin-bottom: 14px;">
+          <button type="button" id="btn-baixar-modelo-posicao" class="btn-secundario" style="width: 100%; padding: 8px; font-size: 12px; display: flex; align-items: center; justify-content: center; gap: 6px;">
+            📥 Baixar Planilha Modelo com Posição (.xlsx)
+          </button>
+        </div>
+
+        <div class="drop-zone" id="drop-zone-planilha-posicao">
+          <span style="font-size: 28px;">📄</span>
+          <span style="font-weight: 500; font-size: 13px; color: var(--tinta-suave);">Clique para selecionar o arquivo</span>
+          <span id="nome-arquivo-planilha-posicao" style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #2b6cb0; font-weight: 600; text-align: center; word-break: break-all;"></span>
+          <input id="input-arquivo-planilha-posicao" type="file" accept=".xlsx,.xls,.csv" style="display:none;">
+        </div>
+
+        <button id="btn-importar-planilha-posicao" class="btn-primario" style="width: 100%; background: #2b6cb0;" disabled>Processar e Importar com Posição</button>
+        <p id="feedback-importacao-posicao" class="feedback" style="margin-top: 10px;"></p>
       </div>
     </div>
 
